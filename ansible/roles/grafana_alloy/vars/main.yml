@@ -1,0 +1,6 @@
+---
+loki_url: "http://localhost:3100/loki/api/v1/push"
+# For Grafana Cloud, you would override these in your playbook/secrets:
+# loki_url: "https://logs-prod-xxx.grafana.net/loki/api/v1/push"
+# loki_user: "123456"
+# loki_password: "your_api_key"

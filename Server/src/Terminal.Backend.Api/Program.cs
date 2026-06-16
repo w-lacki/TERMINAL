@@ -17,6 +17,7 @@ builder.Services
 builder.Host.UseSerilog((context, loggerConfiguration) =>
 {
     loggerConfiguration
+        .Enrich.WithSpan()
         .WriteTo.Console();
 
     if (context.HostingEnvironment.IsProduction())

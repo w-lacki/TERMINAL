@@ -1,0 +1,45 @@
+loki.write "grafana_loki" {
+  endpoint {
+    url = "{{ loki_url }}"
+    {% if loki_user is defined and loki_password is defined %}
+    basic_auth {
+      username = "{{ loki_user }}"
+      password = "{{ loki_password }}"
+    }
+    {% endif %}
+  }
+}
+
+// Collect local system logs (Journal)
+loki.source.journal "read_journal" {
+  forward_to = [loki.write.grafana_loki.receiver]
+  labels     = {
+    instance = "{{ inventory_hostname }}",
+    job      = "system/journal",
+  }
+}
+
+// Scrape Docker container logs
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+loki.source.docker "read_containers" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.containers.targets
+  forward_to = [loki.relabel.docker_logs.receiver]
+}
+
+loki.relabel "docker_logs" {
+  forward_to = [loki.write.grafana_loki.receiver]
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    target_label  = "container"
+  }
+
+  rule {
+    target_label = "instance"
+    replacement  = "{{ inventory_hostname }}"
+  }
+}
