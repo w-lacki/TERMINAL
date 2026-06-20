@@ -1,0 +1,12 @@
+[Unit]
+Description=Terminal database backup service
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/home/anon/dev/TERMINAL
+ExecStart=/usr/bin/docker compose --env-file .env.sample.local up --force-recreate backup
+
+[Install]
+WantedBy=multi-user.target

@@ -11,3 +11,6 @@ services:
       - 60004:5006
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
+
+  backup:
+    image: ghcr.io/koptoel/terminal/backup:latest
