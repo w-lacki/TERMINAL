@@ -17,14 +17,14 @@ export class NewSamplePage extends BaseAddNewPageDragable {
       .click();
     await this.page.getByRole("textbox", { name: "Prefix:" }).fill("DX");
     await this.page.getByRole("combobox", { name: "Projects:" }).click();
-    await this.page.getByRole("option", { name: "Upturn" }).click();
+    await this.page.getByRole("option", { name: "Upturn" }).click({ force: true });
     await this.page.keyboard.press("Escape");
     await this.page.getByRole("checkbox", { name: "Save as recipe:" }).click();
     await this.page
       .getByRole("textbox", { name: "Recipe Name:" })
       .fill("first-recipe");
     await this.page.getByRole("combobox", { name: "Tags:" }).click();
-    await this.page.getByRole("option", { name: "popular-sample" }).click();
+    await this.page.getByRole("option", { name: "popular-sample" }).click({ force: true });
     await this.page.keyboard.press("Escape");
     await this.page
       .getByRole("textbox", { name: "Comment" })
