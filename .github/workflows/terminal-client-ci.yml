@@ -82,7 +82,7 @@ jobs:
         run: |
           docker compose --env-file .env.sample.local up --build -d --wait server database
       - name: Run Playwright tests
-        run: npx playwright test --workers 8
+        run: npx playwright test --workers 2
       - name: Stop server
         if: always()
         working-directory: .
