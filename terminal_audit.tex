@@ -1,0 +1,196 @@
+\documentclass[a4paper,12pt]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[polish]{babel}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{graphicx}
+\usepackage{lastpage}
+\usepackage{fancyhdr}
+\usepackage{seqsplit}
+\usepackage{longtable}
+
+% --- Colors ---
+\definecolor{primary}{HTML}{2563EB}
+\definecolor{secondary}{HTML}{64748B}
+\definecolor{success}{HTML}{22C55E}
+\definecolor{warning}{HTML}{F59E0B}
+\definecolor{danger}{HTML}{EF4444}
+\definecolor{bg}{HTML}{F8FAFC}
+
+% --- Header & Footer ---
+\pagestyle{fancy}
+\fancyhf{}
+\setlength{\headheight}{15pt}
+\rhead{\textcolor{secondary}{Projekt Terminal - Raport z Audytu Technicznego}}
+\lhead{\textcolor{secondary}{Czerwiec 2026}}
+\rfoot{Strona \thepage\ z \pageref{LastPage}}
+
+% --- Custom Commands ---
+\newcommand{\finding}[4]{
+    \begin{tcolorbox}[colframe=#1, colback=white, title={#2}, fonttitle=\bfseries]
+        \textbf{Lokalizacja:} \texttt{\seqsplit{#3}} \\
+        \textbf{Opis:} #4
+    \end{tcolorbox}
+}
+
+\newcommand{\successbox}[2]{
+    \begin{tcolorbox}[colframe=success, colback=white, title={#1}, fonttitle=\bfseries]
+        \textbf{Status:} #2
+    \end{tcolorbox}
+}
+
+% --- Document Info ---
+\title{
+    \vspace{2cm}
+    \textcolor{primary}{\Huge\textbf{Kompleksowy Raport z Audytu Systemu TERMINAL}}\\
+    \vspace{1cm}
+    \large Wersja 2.0 - Rozszerzona
+}
+\author{Zespół Audytu Gemini CLI}
+\date{13 Czerwca 2026}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+\newpage
+
+\tableofcontents
+\newpage
+
+\section{Podsumowanie Wykonawcze}
+Niniejszy dokument stanowi szczegółowy raport z audytu technicznego systemu „Terminal”, przeprowadzonego w czerwcu 2026 roku. Audyt objął analizę kodu źródłowego (frontend i backend), konfigurację infrastruktury, bezpieczeństwo danych oraz procesy CI/CD.
+
+\subsection{Kluczowe Wnioski}
+Mimo solidnych fundamentów architektonicznych opartych na Czystej Architekturze (Clean Architecture) i nowoczesnym stosie technologicznym (\textbf{.NET 9, React 18, PostgreSQL}), system wykazuje krytyczne luki w obszarze bezpieczeństwa operacyjnego oraz drastyczne braki w pokryciu testami automatycznymi.
+
+\begin{itemize}
+    \item \textbf{Ogólna Ocena:} \textcolor{danger}{\textbf{C+}}
+    \item \textbf{Status Bezpieczeństwa:} Krytyczny (wymaga natychmiastowej interwencji).
+    \item \textbf{Dług Techniczny:} Średni, skoncentrowany w warstwie infrastruktury i brakujących optymalizacji frontendu.
+\end{itemize}
+
+\section{Metodologia Audytu}
+Audyt został przeprowadzony z wykorzystaniem następujących technik:
+\begin{enumerate}
+    \item \textbf{Statyczna Analiza Kodu (SAST):} Manualny i automatyczny przegląd kodu pod kątem wzorców podatności.
+    \item \textbf{Analiza Konfiguracji:} Przegląd plików Docker, Ansible oraz konfiguracji CI/CD w GitHub Actions.
+    \item \textbf{Przegląd Zależności:} Weryfikacja wersji bibliotek pod kątem znanych podatności (CVE) oraz cyklu życia oprogramowania.
+    \item \textbf{Analiza Architektoniczna:} Ocena separacji warstw i przestrzegania zasad SOLID.
+\end{enumerate}
+
+\newpage
+\section{Szczegółowa Analiza Bezpieczeństwa}
+
+\subsection{Uwierzytelnianie i Autoryzacja}
+System wykorzystuje standard JWT z algorytmem HS256. Choć sama implementacja generowania tokenów jest poprawna, zidentyfikowano braki w mechanizmach obronnych API.
+
+\finding{danger}{Brak Rate Limitingu}{Server/src/Terminal.Backend.Api/Program.cs}{
+    API nie ogranicza liczby zapytań na sekundę. W dobie zautomatyzowanych ataków, brak limitów (Rate Limiting) naraża infrastrukturę na paraliż (DoS) oraz ułatwia ataki słownikowe na endpoint \texttt{/api/users/login}.
+}
+
+\finding{warning}{Podatność IDOR (Insecure Direct Object Reference)}{Server/src/Terminal.Backend.Api/Modules/}{
+    Mechanizmy autoryzacji sprawdzają jedynie „czy użytkownik ma uprawnienie X”, zamiast „czy użytkownik ma uprawnienie X do zasobu Y”. Napastnik z uprawnieniami \texttt{ProjectDelete} może teoretycznie usunąć dowolny projekt, znając jedynie jego ID (GUID), nawet jeśli nie jest jego właścicielem.
+}
+
+\subsection{Bezpieczeństwo Sieciowe i Nagłówki}
+Konfiguracja serwera HTTP w .NET nie wykorzystuje nowoczesnych mechanizmów zabezpieczających przeglądarkę.
+
+\finding{danger}{Brak Nagłówków Security}{Server/src/Terminal.Backend.Infrastructure/Extensions.cs}{
+    Brak konfiguracji \texttt{HSTS} (wymuszanie HTTPS), \texttt{Content-Security-Policy} (ochrona przed XSS) oraz \texttt{X-Content-Type-Options}. To sprawia, że użytkownicy końcowi są podatni na ataki typu Man-in-the-Middle oraz wstrzykiwanie skryptów.
+}
+
+\finding{danger}{Zbyt Liberalny CORS}{Server/src/Terminal.Backend.Infrastructure/Extensions.cs}{
+    Polityka \texttt{AllowAnyOrigin()} na produkcji to „zaproszenie” dla ataków CSRF. API powinno akceptować żądania jedynie z zaufanej domeny frontendu.
+}
+
+\newpage
+\section{Infrastruktura i Łańcuch Dostaw}
+
+\subsection{Konteneryzacja (Docker)}
+\finding{warning}{Praca na Uprawnieniach Root}{Client/Dockerfile, Server/src/Dockerfile}{
+    Oba pliki Dockerfile nie definiują użytkownika \texttt{USER}. Procesy wewnątrz kontenera działają z pełnymi uprawnieniami root, co w przypadku exploita w bibliotece systemowej pozwala na przejęcie kontroli nad całym hostem.
+}
+
+\subsection{Bezpieczeństwo Zależności}
+\finding{warning}{Użycie Bibliotek w Wersjach Beta}{Server/src/Terminal.Backend.Infrastructure/Terminal.Backend.Infrastructure.csproj}{
+    Krytyczne komponenty OpenTelemetry (np. \texttt{OpenTelemetry.Instrumentation.EntityFrameworkCore}) są w wersji \texttt{1.0.0-beta.12}. Wersje beta nie gwarantują stabilności ani bezpieczeństwa, a ich użycie w systemie produkcyjnym w 2026 roku jest wysoce ryzykowne.
+}
+
+\subsection{Sekrety i Konfiguracja}
+\finding{warning}{Wyciek Szczegółów Błędów DB}{ansible/deploy-playbook.yml}{
+    Ustawienie \texttt{Include Error Detail=true} w środowisku produkcyjnym powoduje, że komunikaty o błędach bazy danych (np. przy naruszeniu klucza obcego) zawierają szczegóły struktury tabel i wartości pól, co ułatwia rozpoznanie systemu przez napastnika.
+}
+
+\newpage
+\section{Wydajność i Optymalizacja}
+
+\subsection{Frontend (React & Vite)}
+\finding{warning}{Brak Lazy Loading dla Tras}{Client/src/App.tsx}{
+    Wszystkie komponenty stron są importowane statycznie. Powoduje to, że paczka \texttt{index.js} jest niepotrzebnie duża, co drastycznie wydłuża czas pierwszego załadowania aplikacji na urządzeniach mobilnych.
+}
+
+\finding{warning}{Błędna Logika Offline (PWA)}{Client/src/App.tsx}{
+    Aplikacja PWA powinna pozwalać na przeglądanie danych w trybie offline. Tymczasem w \texttt{App.tsx} wiele tras jest renderowanych warunkowo: \texttt{\{online \&\& ...\}}. Jeśli użytkownik straci zasięg, aplikacja przestanie renderować formularze, zamiast pozwolić na wpisanie danych i ich synchronizację po odzyskaniu połączenia.
+}
+
+\subsection{Backend (EF Core)}
+\finding{warning}{N+1 i Nieoptymalne Zapytania}{Server/src/Terminal.Backend.Infrastructure/DAL/Handlers/Projects/GetProjectQueryHandler.cs}{
+    Kod zawiera jawny komentarz \texttt{// FIXME: .Include(p => p.Processes)}. Zamiast jednego zapytania z JOIN, system wykonuje dwa osobne zapytania do bazy danych, co przy dużej skali projektów doprowadzi do degradacji wydajności.
+}
+
+\newpage
+\section{Jakość Kodu i Procesy CI/CD}
+
+\subsection{Testowanie (Największy Słaby Punkt)}
+\finding{danger}{Krytyczny Brak Testów i Błąd w CI}{.github/workflows/terminal-server-ci.yml}{
+    Pipeline CI dla backendu wykonuje jedynie \texttt{dotnet build}. Całkowicie pominięto krok \texttt{dotnet test}. W połączeniu z niemal zerową liczbą testów jednostkowych w katalogu \texttt{test/}, system jest całkowicie nieodporny na regresje.
+}
+
+\subsection{Standardy Programistyczne}
+\successbox{Czysta Architektura}{
+    Separacja warstw (\texttt{Core}, \texttt{Application}, \texttt{Infrastructure}, \texttt{Api}) jest wzorowa. Wykorzystanie wzorca MediatR pozwala na łatwe rozszerzanie logiki biznesowej bez modyfikacji istniejącego kodu.
+}
+
+\successbox{Obserwowalność (Observability)}{
+    Integracja z HyperDX i OpenTelemetry zapewnia wgląd w działanie systemu na poziomie światowej klasy. To najmocniejszy punkt techniczny projektu.
+}
+
+\newpage
+\section{Wnioski i Rekomendacje}
+
+\subsection{Priorytet 1: Natychmiastowe (Security Fixes)}
+\begin{enumerate}
+    \item \textbf{CORS:} Ograniczyć \texttt{AllowAnyOrigin} do konkretnych domen.
+    \item \textbf{Security Headers:} Wdrożyć middleware dodający nagłówki \texttt{HSTS, CSP, X-Frame-Options}.
+    \item \textbf{Rate Limiting:} Dodać limitowanie zapytań dla endpointów logowania i zapisu.
+\end{enumerate}
+
+\subsection{Priorytet 2: Krótkoterminowe (Quality & Performance)}
+\begin{enumerate}
+    \item \textbf{CI/CD:} Dodać krok \texttt{dotnet test} do pipeline'u i zacząć pisać testy jednostkowe dla \texttt{Application}.
+    \item \textbf{Docker:} Przejść na obrazy \texttt{alpine} lub \texttt{distroless} i zdefiniować nieuprzywilejowanego użytkownika.
+    \item \textbf{React:} Wdrożyć \texttt{React.lazy()} i \texttt{Suspense} dla tras w \texttt{App.tsx}.
+\end{enumerate}
+
+\subsection{Priorytet 3: Średnioterminowe (Architecture)}
+\begin{enumerate}
+    \item \textbf{IDOR:} Zaimplementować \texttt{Resource-based Authorization}.
+    \item \textbf{PWA:} Przebudować logikę offline, aby formularze były dostępne bez połączenia z siecią.
+    \item \textbf{EF Core:} Usunąć problemy N+1 poprzez poprawne użycie \texttt{.Include()}.
+\end{enumerate}
+
+\vspace{2cm}
+\begin{center}
+    \textit{Koniec Raportu}
+\end{center}
+
+\end{document}

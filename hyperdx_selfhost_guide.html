@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instrukcja Wdrożenia Self-Hosted HyperDX</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --card-border: #334155;
+            --accent-color: #38bdf8;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --code-bg: #090d16;
+            --diff-add-bg: rgba(34, 197, 94, 0.15);
+            --diff-add-border: #22c55e;
+            --diff-add-text: #4ade80;
+            --diff-remove-bg: rgba(239, 68, 68, 0.15);
+            --diff-remove-border: #ef4444;
+            --diff-remove-text: #f87171;
+            --tag-bg: #0369a1;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            color: var(--accent-color);
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+        }
+
+        .step-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 1.8rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .step-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .step-number {
+            background-color: var(--accent-color);
+            color: #0f172a;
+            font-weight: bold;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .step-title {
+            font-size: 1.4rem;
+            color: var(--text-main);
+        }
+
+        .file-path {
+            display: inline-block;
+            background-color: rgba(56, 189, 248, 0.1);
+            color: var(--accent-color);
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+        }
+
+        p.desc {
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        pre {
+            background-color: var(--code-bg);
+            border-radius: 8px;
+            padding: 1.2rem;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Fira Code', 'Courier New', monospace;
+            font-size: 0.92rem;
+            border: 1px solid #1e293b;
+            margin-bottom: 1rem;
+        }
+
+        code {
+            font-family: 'Consolas', 'Fira Code', 'Courier New', monospace;
+        }
+
+        /* Diff styling */
+        .diff-line {
+            display: block;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .diff-add {
+            background-color: var(--diff-add-bg);
+            color: var(--diff-add-text);
+            border-left: 3px solid var(--diff-add-border);
+        }
+
+        .diff-remove {
+            background-color: var(--diff-remove-bg);
+            color: var(--diff-remove-text);
+            border-left: 3px solid var(--diff-remove-border);
+            text-decoration: line-through;
+        }
+
+        .diff-unchanged {
+            color: var(--text-muted);
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: bold;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+
+        .badge-added { background: #166534; color: #4ade80; }
+        .badge-modified { background: #854d0e; color: #fde047; }
+        .badge-config { background: #3730a3; color: #a5b4fc; }
+
+        .note-box {
+            background-color: rgba(56, 189, 248, 0.08);
+            border-left: 4px solid var(--accent-color);
+            padding: 1rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1rem 0;
+            color: #e2e8f0;
+        }
+
+        .cmd-block {
+            color: #38bdf8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Przewodnik Wdrożenia Self-Hosted HyperDX</h1>
+        <p>Kompleksowy przepis krok po kroku dla projektu <strong>TERMINAL</strong></p>
+    </header>
+
+    <!-- ARCHITEKTURA SERWERÓW -->
+    <div class="step-card" style="border-left: 4px solid #38bdf8;">
+        <div class="step-header">
+            <div class="step-title">Architektura i Serwery Projektu <span class="badge badge-config">Infra Spec</span></div>
+        </div>
+        <p class="desc">W tym środowisku wyodrębnione są trzy warstwy sieciowe:</p>
+        <div class="note-box">
+            <strong>1. Serwer Nginx Reverse Proxy / Brzegowy (IP: <code>153.19.51.129</code>):</strong><br>
+            Serwer wejściowy z internetu. To na nim definiuje się reguły Nginx i certyfikaty SSL/TLS dla subdomen <code>telemetry.terminal.eti.pg.edu.pl</code> oraz opcjonalnie <code>hyperdx.terminal.eti.pg.edu.pl</code>.<br><br>
+            <strong>2. Dedykowany Serwer HyperDX (IP wewnętrzne: <code>172.20.3.153</code>):</strong><br>
+            Dedykowana maszyna wirtualna przeznaczona na instalację HyperDX i ClickHouse.<br><br>
+            <strong>3. Serwer Aplikacyjny / Docker Host (IP publiczne: <code>153.19.51.139</code> | IP wewnętrzne: <code>172.20.3.97</code>):</strong><br>
+            Główny serwer, na którym działają kontenery Docker aplikacji (Backend, Frontend, Postgres).
+        </div>
+    </div>
+
+    <!-- KROK 1 -->
+    <div class="step-card">
+        <div class="step-header">
+            <div class="step-number">1</div>
+            <div class="step-title">Uruchomienie HyperDX na Dedykowanym Serwerze (172.20.3.153) <span class="badge badge-config">Infra</span></div>
+        </div>
+        <p class="desc">Zaloguj się przez SSH na dedykowany serwer HyperDX (<code>172.20.3.153</code>), utwórz katalog dla HyperDX i uruchom kontener za pomocą Docker Compose.</p>
+        
+        <pre><code><span class="cmd-block"># 1. Zaloguj się przez SSH na serwer HyperDX (172.20.3.153)</span>
+ssh uzytkownik@172.20.3.153
+
+<span class="cmd-block"># 2. Utwórz katalog i pobierz repozytorium HyperDX</span>
+mkdir -p /opt/hyperdx && cd /opt/hyperdx
+git clone https://github.com/hyperdxio/hyperdx.git .
+
+<span class="cmd-block"># 3. Uruchom stos Docker w tle</span>
+cd docker
+docker compose up -d</code></pre>
+        
+        <div class="note-box">
+            <strong>Co zostało uruchomione na serwerze 172.20.3.153?</strong><br>
+            • Port <strong>4318</strong>: Kolektor OTLP HTTP (zbiera logi i metryki od Backendu i Frontendu).<br>
+            • Port <strong>8080</strong>: Web UI (Panel interfejsu graficznego, skąd pobierzesz swój lokalny <code>API Key</code>).<br>
+            • Port <strong>8123</strong>: Interfejs HTTP bazy ClickHouse (do zapytań SQL z konsoli).
+        </div>
+    </div>
+
+    <!-- KROK 2 -->
+    <div class="step-card">
+        <div class="step-header">
+            <div class="step-number">2</div>
+            <div class="step-title">Konfiguracja Nginx na Serwerze Brzegowym (153.19.51.129) <span class="badge badge-config">Proxy</span></div>
+        </div>
+        <p class="desc">Na serwerze Reverse Proxy (<code>153.19.51.129</code>) dodaj wirtualny host, który przekaże ruch z internetu na dedykowany serwer HyperDX (<code>172.20.3.153:4318</code>).</p>
+        
+        <div class="file-path">/etc/nginx/sites-available/telemetry.conf (na serwerze 153.19.51.129)</div>
+        
+        <pre><code>server {
+    listen 80;
+    server_name telemetry.terminal.eti.pg.edu.pl;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name telemetry.terminal.eti.pg.edu.pl;
+
+    ssl_certificate /etc/letsencrypt/live/telemetry.terminal.eti.pg.edu.pl/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/telemetry.terminal.eti.pg.edu.pl/privkey.pem;
+
+    location / {
+        # Przekierowanie do dedykowanego serwera HyperDX na port 4318 (OTLP HTTP Kolektor)
+        proxy_pass http://172.20.3.153:4318;
+        
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}</code></pre>
+    </div>
+
+    <!-- KROK 3 (NOWY - GUI) -->
+    <div class="step-card">
+        <div class="step-header">
+            <div class="step-number">3</div>
+            <div class="step-title">Uruchomienie i Dostęp do Web GUI HyperDX (Port 8080) <span class="badge badge-added">Interfejs GUI</span></div>
+        </div>
+        <p class="desc">Interfejs graficzny HyperDX (GUI) uruchamia się automatycznie na porcie 8080 serwera HyperDX (<code>172.20.3.153</code>). Masz dwie opcje uzyskania do niego dostępu:</p>
+
+        <p class="desc"><strong>Opcja A: Wystawienie GUI przez Nginx brzegowy na nowej domenie (hyperdx.terminal.eti.pg.edu.pl)</strong></p>
+        <div class="file-path">/etc/nginx/sites-available/hyperdx-gui.conf (na serwerze 153.19.51.129)</div>
+
+        <pre><code>server {
+    listen 443 ssl http2;
+    server_name hyperdx.terminal.eti.pg.edu.pl;
+
+    ssl_certificate /etc/letsencrypt/live/hyperdx.terminal.eti.pg.edu.pl/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/hyperdx.terminal.eti.pg.edu.pl/privkey.pem;
+
+    location / {
+        # Przekierowanie do dedykowanego serwera HyperDX na port 8080 (HyperDX Web UI)
+        proxy_pass http://172.20.3.153:8080;
+        
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+    }
+}</code></pre>
+
+        <p class="desc"><strong>Opcja B: Bezpośrednie połączenie przez Tunel SSH (Zalecane — bez modyfikacji Nginx)</strong></p>
+        <p class="desc">Możesz utworzyć tunel i otworzyć GUI lokalnie na swoim komputerze:</p>
+        <pre><code><span class="cmd-block"># Na swoim komputerze wpisz (przez bastion/serwer lub bezpośrednio na IP HyperDX):</span>
+ssh -L 8080:172.20.3.153:8080 uzytkownik@153.19.51.139
+
+<span class="cmd-block"># Następnie otwórz w przeglądarce na swoim komputerze:</span>
+http://localhost:8080</code></pre>
+
+        <div class="note-box">
+            <strong>Pierwsze logowanie do GUI & Ingestion API Key:</strong><br>
+            Po otwarciu panelu zarejestruj swoje konto administratora. W zakładce <strong>Team Settings</strong> skopiuj swój prywatny <code>Ingestion API Key</code>. Użyjesz go w:<br>
+            1. Pliku <code>.env</code> serwera aplikacyjnego jako <code>HYPERDX_API_KEY</code>.<br>
+            2. Nagłówku OpenTelemetry jako <code>OTEL_EXPORTER_OTLP_HEADERS=Authorization=TWÓJ_KEY</code>.<br>
+            3. Sekretach GitHub Actions jako <code>HDX_OTEL_EXPORTER_OTLP_HEADERS</code> i <code>HDX_API_KEY</code>.
+        </div>
+    </div>
+
+    <!-- KROK 4 -->
+    <div class="step-card">
+        <div class="step-header">
+            <div class="step-number">4</div>
+            <div class="step-title">Modyfikacja Kodu Frontendu (React) <span class="badge badge-modified">Edycja Kodu</span></div>
+        </div>
+        <p class="desc">Skonfiguruj SDK <code>@hyperdx/browser</code> w pliku <code>Client/src/main.tsx</code>, przekazując parametr <code>url</code> wskazujący na adres Nginx kolektora.</p>
+        
+        <div class="file-path">Client/src/main.tsx</div>
+
+        <pre><code>import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import HyperDX from "@hyperdx/browser";
+import "./index.css";
+import App from "./App.tsx";
+
+HyperDX.init({
+  apiKey: import.meta.env.VITE_HYPERDX_API_KEY,
+  service: "terminal-frontend",
+<span class="diff-line diff-add">+   url: import.meta.env.VITE_HYPERDX_URL || "https://telemetry.terminal.eti.pg.edu.pl",</span>
+<span class="diff-line diff-remove">-   tracePropagationTargets: [/localhost/],</span>
+<span class="diff-line diff-add">+   tracePropagationTargets: [/localhost/, /terminal\.eti\.pg\.edu\.pl/],</span>
+  consoleCapture: true,
+});
+
+createRoot(document.getElementById("root")!).render(
+  &lt;StrictMode&gt;
+    &lt;App /&gt;
+  &lt;/StrictMode&gt;
+);</code></pre>
+    </div>
+
+    <!-- KROK 5 -->
+    <div class="step-card">
+        <div class="step-header">
+            <div class="step-number">5</div>
+            <div class="step-title">Modyfikacja Client/Dockerfile <span class="badge badge-modified">Edycja Kodu</span></div>
+        </div>
+        <p class="desc">Umożliw przekazanie adresu <code>VITE_HYPERDX_URL</code> podczas budowania kontenera klienta.</p>
+        
+        <div class="file-path">Client/Dockerfile</div>
+
+        <pre><code>FROM node:alpine AS build
+WORKDIR /src
+<span class="diff-line diff-add">+ ARG VITE_HYPERDX_API_KEY</span>
+<span class="diff-line diff-add">+ ARG VITE_HYPERDX_URL</span>
+<span class="diff-line diff-add">+ ENV VITE_HYPERDX_API_KEY=$VITE_HYPERDX_API_KEY</span>
+<span class="diff-line diff-add">+ ENV VITE_HYPERDX_URL=$VITE_HYPERDX_URL</span>
+COPY package*.json .
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /src/dist /usr/share/nginx/html
+COPY ./nginx.conf etc/nginx/conf.d/default.conf
+EXPOSE 5173
+CMD [ "nginx", "-g", "daemon off;"]</code></pre>
+    </div>
+
+    <!-- KROK 6 -->
+    <div class="step-card">
+        <div class="step-header">
+            <div class="step-number">6</div>
+            <div class="step-title">Aktualizacja Pliku Środowiskowego i Ansible <span class="badge badge-config">Konfiguracja</span></div>
+        </div>
+        <p class="desc">Skieruj OpenTelemetry z backendu .NET na port 4318 dedykowanego serwera HyperDX (172.20.3.153).</p>
+
+        <div class="file-path">.env (lub Sekret GitHub / Ansible)</div>
+
+        <pre><code># HyperDX & OpenTelemetry (Lokalny Self-Hosted HyperDX)
+HYPERDX_API_KEY=TWÓJ_LOKALNY_API_KEY_Z_PANELU_HYPERDX
+OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf
+<span class="diff-line diff-remove">- OTEL_EXPORTER_OTLP_ENDPOINT=https://in-otel.hyperdx.io</span>
+<span class="diff-line diff-add">+ OTEL_EXPORTER_OTLP_ENDPOINT=http://172.20.3.153:4318</span>
+OTEL_EXPORTER_OTLP_HEADERS=Authorization=TWÓJ_LOKALNY_API_KEY_Z_PANELU_HYPERDX
+OTEL_RESOURCE_ATTRIBUTES=service.name=terminal-backend</code></pre>
+
+        <div class="file-path">ansible/deploy-playbook.yml</div>
+
+        <pre><code><span class="diff-line diff-unchanged">        OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"</span>
+<span class="diff-line diff-remove">-       OTEL_EXPORTER_OTLP_ENDPOINT: "{{ otel_endpoint }}"</span>
+<span class="diff-line diff-add">+       OTEL_EXPORTER_OTLP_ENDPOINT: "http://172.20.3.153:4318"</span>
+<span class="diff-line diff-unchanged">        OTEL_EXPORTER_OTLP_HEADERS: "authorization={{ otel_headers }}"</span>
+<span class="diff-line diff-unchanged">        OTEL_RESOURCE_ATTRIBUTES: "{{ otel_attributes }}"</span>
+<span class="diff-line diff-unchanged">        OTEL_SERVICE_NAME: "terminal-backend"</span></code></pre>
+    </div>
+
+    <!-- KROK 7 -->
+    <div class="step-card">
+        <div class="step-header">
+            <div class="step-number">7</div>
+            <div class="step-title">Alternatywa: Odpytywanie Metryk z Konsoli (CLI / Bez GUI) <span class="badge badge-added">CLI Workflow</span></div>
+        </div>
+        <p class="desc">Oprócz Web GUI, w dowolnym momencie możesz wyciągać metryki bezpośrednio w konsoli SSH.</p>
+
+        <p class="desc"><strong>A. Wejście do konsoli SQL bazy ClickHouse:</strong></p>
+        <pre><code>docker exec -it hyperdx-clickhouse clickhouse-client</code></pre>
+
+        <p class="desc"><strong>B. Zapytanie SQL o metryki wydajnościowe backendu:</strong></p>
+        <pre><code><span class="diff-line diff-unchanged">-- Wyświetlenie średniego i maksymalnego czasu trwania zapytań HTTP</span>
+SELECT 
+    metric_name, 
+    avg(value) AS avg_duration_ms, 
+    max(value) AS max_duration_ms,
+    count() AS total_requests
+FROM hyperdx.metrics 
+WHERE metric_name = 'http.server.request.duration' 
+GROUP BY metric_name;</code></pre>
+
+        <p class="desc"><strong>C. Odpytanie o metryki jednym poleceniem cURL z terminala Linux:</strong></p>
+        <pre><code>curl -s 'http://127.0.0.1:8123/?query=SELECT+metric_name,value+FROM+hyperdx.metrics+ORDER+BY+timestamp+DESC+LIMIT+10'</code></pre>
+    </div>
+
+</div>
+
+</body>
+</html>

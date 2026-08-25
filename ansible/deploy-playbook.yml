@@ -28,7 +28,7 @@
         Postgres__ConnectionString: "Host=database;Database=terminal;Username={{ postgres_user }};Password={{ postgres_pass }};Include Error Detail=true"
         
         OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
-        OTEL_EXPORTER_OTLP_ENDPOINT: "{{ otel_endpoint }}"
+        OTEL_EXPORTER_OTLP_ENDPOINT: "{{ otel_endpoint | default('http://172.20.3.153:4318') }}"
         OTEL_EXPORTER_OTLP_HEADERS: "authorization={{ otel_headers }}"
         OTEL_RESOURCE_ATTRIBUTES: "{{ otel_attributes }}"
         OTEL_SERVICE_NAME: "terminal-backend"

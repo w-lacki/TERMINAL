@@ -1,0 +1,53 @@
+---
+- name: Install dependencies for Grafana repo
+  apt:
+    name:
+      - apt-transport-https
+      - software-properties-common
+      - wget
+    state: present
+
+- name: Add Grafana GPG key
+  apt_key:
+    url: https://apt.grafana.com/gpg.key
+    state: present
+
+- name: Add Grafana repository
+  apt_repository:
+    repo: deb https://apt.grafana.com stable main
+    state: present
+
+- name: Install Grafana Alloy
+  apt:
+    name: alloy
+    state: present
+    update_cache: yes
+
+- name: Create Alloy configuration directory
+  file:
+    path: /etc/alloy
+    state: directory
+    owner: alloy
+    group: alloy
+    mode: '0755'
+
+- name: Deploy Alloy configuration
+  template:
+    src: config.alloy.j2
+    dest: /etc/alloy/config.alloy
+    owner: alloy
+    group: alloy
+    mode: '0644'
+  notify: Restart Alloy
+
+- name: Ensure Alloy user is in the correct groups for log access
+  user:
+    name: alloy
+    groups: "adm,systemd-journal"
+    append: yes
+
+- name: Enable and start Alloy service
+  systemd:
+    name: alloy
+    state: started
+    enabled: yes
