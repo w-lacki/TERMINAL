@@ -4,6 +4,7 @@ using Terminal.Backend.Application;
 using Terminal.Backend.Core;
 using Terminal.Backend.Infrastructure;
 using Serilog.Enrichers; 
+using Serilog.Enrichers.Span;
 
 var builder = WebApplication.CreateBuilder(args);
 
