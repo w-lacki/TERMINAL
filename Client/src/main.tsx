@@ -7,7 +7,9 @@ import App from "./App.tsx";
 HyperDX.init({
   apiKey: import.meta.env.VITE_HYPERDX_API_KEY,
   service: "terminal-frontend",
-  url: import.meta.env.VITE_HYPERDX_URL || "https://telemetry.terminal.eti.pg.edu.pl",
+  url:
+    import.meta.env.VITE_HYPERDX_URL ||
+    "https://telemetry.terminal.eti.pg.edu.pl",
   tracePropagationTargets: [/localhost/, /terminal\.eti\.pg\.edu\.pl/],
   consoleCapture: true,
 });

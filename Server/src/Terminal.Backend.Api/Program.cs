@@ -3,6 +3,7 @@ using Terminal.Backend.Api.Modules;
 using Terminal.Backend.Application;
 using Terminal.Backend.Core;
 using Terminal.Backend.Infrastructure;
+using Serilog.Enrichers; 
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,3 +45,5 @@ namespace Terminal.Backend.Api
     {
     }
 }
+
+
