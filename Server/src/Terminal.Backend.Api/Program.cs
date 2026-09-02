@@ -3,6 +3,8 @@ using Terminal.Backend.Api.Modules;
 using Terminal.Backend.Application;
 using Terminal.Backend.Core;
 using Terminal.Backend.Infrastructure;
+using Serilog.Enrichers; 
+using Serilog.Enrichers.Span;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +19,7 @@ builder.Services
 builder.Host.UseSerilog((context, loggerConfiguration) =>
 {
     loggerConfiguration
+        .Enrich.WithSpan()
         .WriteTo.Console();
 
     if (context.HostingEnvironment.IsProduction())
@@ -43,3 +46,5 @@ namespace Terminal.Backend.Api
     {
     }
 }
+
+

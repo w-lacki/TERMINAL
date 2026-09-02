@@ -55,9 +55,9 @@ jobs:
       ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       ansible-user: ${{ secrets.ANSIBLE_USER }}
       deployment-targets: ${{ secrets.DEPLOYMENT_TARGETS }}
-      otel-endpoint: ${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
-      otel-headers: ${{ secrets.OTEL_EXPORTER_OTLP_HEADERS }}
-      otel-attributes: ${{ secrets.OTEL_RESOURCE_ATTRIBUTES }}
+      otel-endpoint: ${{ secrets.HDX_OTEL_EXPORTER_OTLP_ENDPOINT || secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}
+      otel-headers: ${{ secrets.HDX_OTEL_EXPORTER_OTLP_HEADERS || secrets.OTEL_EXPORTER_OTLP_HEADERS }}
+      otel-attributes: ${{ secrets.HDX_OTEL_RESOURCE_ATTRIBUTES || secrets.OTEL_RESOURCE_ATTRIBUTES }}
       registry-token: ${{ secrets.GITHUB_TOKEN }}
       JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
       ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
