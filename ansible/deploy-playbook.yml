@@ -91,36 +91,41 @@
     - name: Pull backup image
       shell: "docker compose -p terminaldev --env-file {{ app_dir }}/.env -f {{ compose_image }} pull backup"
 
+    - name: Create user systemd directory
+      file:
+        path: "{{ ansible_env.HOME }}/.config/systemd/user"
+        state: directory
+        mode: "0755"
+
     - name: Install backup service
-      become: true
       copy:
         src: "{{ app_dir }}/Backup/terminal-backup.service"
-        dest: /etc/systemd/system/terminal-backup.service
+        dest: "{{ ansible_env.HOME }}/.config/systemd/user/terminal-backup.service"
         remote_src: true
         mode: "0644"
 
     - name: Set backup working directory
-      become: true
       lineinfile:
-        path: /etc/systemd/system/terminal-backup.service
+        path: "{{ ansible_env.HOME }}/.config/systemd/user/terminal-backup.service"
         regexp: "^WorkingDirectory="
         line: "WorkingDirectory={{ app_dir }}"
 
     - name: Install backup timer
-      become: true
       copy:
         src: "{{ app_dir }}/Backup/terminal-backup.timer"
-        dest: /etc/systemd/system/terminal-backup.timer
+        dest: "{{ ansible_env.HOME }}/.config/systemd/user/terminal-backup.timer"
         remote_src: true
         mode: "0644"
 
     - name: Enable backup timer
-      become: true
       systemd:
         daemon_reload: true
         name: terminal-backup.timer
         enabled: true
         state: started
+        scope: user
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_user_uid }}"
 
     - name: Show logs on failure
       shell: "docker logs terminal.server --tail 100"
