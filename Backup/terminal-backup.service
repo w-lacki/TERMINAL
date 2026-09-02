@@ -6,7 +6,7 @@ After=docker.service
 [Service]
 Type=oneshot
 WorkingDirectory=/home/anon/dev/TERMINAL
-ExecStart=/usr/bin/docker compose --env-file .env.sample.local up --force-recreate backup
+ExecStart=/usr/bin/docker compose -p terminaldev -f compose.yaml -f compose.prod.yaml run --rm --no-deps backup
 
 [Install]
 WantedBy=multi-user.target
