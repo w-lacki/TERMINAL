@@ -1,11 +1,62 @@
 - name: Deploy
   hosts: all
   gather_facts: yes
+  vars:
+    app_dir: "{{ deployment_dir | default('/home/terminal_user') }}"
 
   tasks:
+    - name: Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Copy backup and Compose files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ app_dir }}/{{ item.dest }}"
+      loop:
+        - { src: "../Backup/", dest: "Backup/" }
+        - { src: "../compose.yaml", dest: "compose.yaml" }
+        - { src: "../compose.prod.yaml", dest: "compose.prod.yaml" }
+
+    - name: Write backup environment
+      blockinfile:
+        path: "{{ app_dir }}/.env"
+        create: true
+        mode: "0600"
+        marker: "# {mark} ANSIBLE BACKUP"
+        block: |
+          POSTGRES_DB=terminal
+          POSTGRES_USER={{ postgres_user }}
+          POSTGRES_PASSWORD={{ postgres_pass }}
+          RESTIC_PASSWORD={{ restic_password }}
+          RESTIC_GDRIVE_ROOT_FOLDER_ID={{ restic_gdrive_folder_id }}
+          RESTIC_GDRIVE_SERVICE_ACCOUNT_FILE={{ app_dir }}/gdrive-sa.json
+          RESTIC_SFTP_HOST={{ backup_sftp_host }}
+          RESTIC_SFTP_USER={{ backup_sftp_user }}
+          RESTIC_SFTP_PORT={{ backup_sftp_port | default('22') }}
+          RESTIC_SFTP_REPO_PATH={{ backup_sftp_repo_path }}
+          RESTIC_SFTP_KEY_PATH={{ app_dir }}/backup-id_ed25519
+      no_log: true
+
+    - name: Write Google service account
+      copy:
+        content: "{{ gdrive_service_account_json_b64 | b64decode }}"
+        dest: "{{ app_dir }}/gdrive-sa.json"
+        mode: "0600"
+      no_log: true
+
+    - name: Write SFTP private key
+      copy:
+        content: "{{ backup_sftp_private_key_b64 | b64decode }}"
+        dest: "{{ app_dir }}/backup-id_ed25519"
+        mode: "0600"
+      no_log: true
+
     - name: Log into GitHub Container Registry
       shell: "echo {{ registry_token }} | docker login ghcr.io -u {{ github_user }} --password-stdin"
-      no_log: true 
+      no_log: true
 
     - name: Docker compose up
       shell: |
@@ -19,27 +70,57 @@
         Jwt__Audience: "{{ jwt_audience | default('TerminalClient') }}"
         Jwt__AccessTokenExpirationMinutes: "60"
         Jwt__RefreshTokenExpirationDays: "7"
-        
         Administrator__Email: "{{ admin_email }}"
         Administrator__Password: "{{ admin_password }}"
         POSTGRES_DB: "terminal"
         POSTGRES_USER: "{{ postgres_user }}"
         POSTGRES_PASSWORD: "{{ postgres_pass }}"
         Postgres__ConnectionString: "Host=database;Database=terminal;Username={{ postgres_user }};Password={{ postgres_pass }};Include Error Detail=true"
-        
         OTEL_EXPORTER_OTLP_PROTOCOL: "http/protobuf"
         OTEL_EXPORTER_OTLP_ENDPOINT: "{{ otel_endpoint | default('http://172.20.3.153:4318') }}"
         OTEL_EXPORTER_OTLP_HEADERS: "authorization={{ otel_headers }}"
         OTEL_RESOURCE_ATTRIBUTES: "{{ otel_attributes }}"
         OTEL_SERVICE_NAME: "terminal-backend"
-        
         COMPOSE_INTERACTIVE_NO_CLI: "1"
         COMPOSE_MENU: "0"
-
       args:
         executable: /bin/bash
       register: compose_up
       ignore_errors: yes
+
+    - name: Pull backup image
+      shell: "docker compose -p terminaldev --env-file {{ app_dir }}/.env -f {{ compose_image }} pull backup"
+
+    - name: Install backup service
+      become: true
+      copy:
+        src: "{{ app_dir }}/Backup/terminal-backup.service"
+        dest: /etc/systemd/system/terminal-backup.service
+        remote_src: true
+        mode: "0644"
+
+    - name: Set backup working directory
+      become: true
+      lineinfile:
+        path: /etc/systemd/system/terminal-backup.service
+        regexp: "^WorkingDirectory="
+        line: "WorkingDirectory={{ app_dir }}"
+
+    - name: Install backup timer
+      become: true
+      copy:
+        src: "{{ app_dir }}/Backup/terminal-backup.timer"
+        dest: /etc/systemd/system/terminal-backup.timer
+        remote_src: true
+        mode: "0644"
+
+    - name: Enable backup timer
+      become: true
+      systemd:
+        daemon_reload: true
+        name: terminal-backup.timer
+        enabled: true
+        state: started
 
     - name: Show logs on failure
       shell: "docker logs terminal.server --tail 100"

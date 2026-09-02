@@ -1,5 +1,10 @@
 on:
   workflow_call:
+    inputs:
+      app-dir:
+        required: false
+        type: string
+        default: /home/terminal_user
     secrets:
       ssh-private-key: { required: true }
       ansible-user: { required: true }
@@ -13,6 +18,13 @@ on:
       ADMIN_PASSWORD: { required: true }
       POSTGRES_USER: { required: true }
       POSTGRES_PASSWORD: { required: true }
+      RESTIC_PASSWORD: { required: true }
+      RESTIC_GDRIVE_FOLDER_ID: { required: true }
+      GDRIVE_SERVICE_ACCOUNT_JSON_B64: { required: true }
+      BACKUP_SFTP_HOST: { required: true }
+      BACKUP_SFTP_USER: { required: true }
+      BACKUP_SFTP_REPO_PATH: { required: true }
+      BACKUP_SFTP_PRIVATE_KEY_B64: { required: true }
 
 jobs:
   deploy:
@@ -40,15 +52,6 @@ jobs:
 
       - name: Run Ansible Playbook
         env:
-          ANSIBLE_HOST_KEY_CHECKING: false
-          ANSIBLE_PIPELINING: "True"
-          ANSIBLE_SSH_ARGS: "-o StrictHostKeyChecking=no -o ControlMaster=auto -o ControlPersist=600s -o ServerAliveInterval=15 -o ServerAliveCountMax=10"
-        run: |
-          RAW_TARGET="${{ secrets.deployment-targets }}"
-          TARGET_IP=$(echo "$RAW_TARGET" | cut -d',' -f1 | cut -d':' -f2)
-          
-      - name: Run Ansible Playbook
-        env:
           REPO_OWNER: ${{ github.repository_owner }}
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
@@ -57,6 +60,7 @@ jobs:
           ansible-playbook -i inventory.ini ansible/deploy-playbook.yml \
             --extra-vars "{
               \"compose_image\": \"$IMAGE_NAME\",
+              \"deployment_dir\": \"${{ inputs.app-dir }}\",
               \"registry_token\": \"${{ secrets.registry-token }}\",
               \"github_user\": \"${{ github.actor }}\",
               \"otel_endpoint\": \"${{ secrets.otel-endpoint }}\",
@@ -66,7 +70,14 @@ jobs:
               \"admin_email\": \"${{ secrets.ADMIN_EMAIL }}\",
               \"admin_password\": \"${{ secrets.ADMIN_PASSWORD }}\",
               \"postgres_user\": \"${{ secrets.POSTGRES_USER }}\",
-              \"postgres_pass\": \"${{ secrets.POSTGRES_PASSWORD }}\"
+              \"postgres_pass\": \"${{ secrets.POSTGRES_PASSWORD }}\",
+              \"restic_password\": \"${{ secrets.RESTIC_PASSWORD }}\",
+              \"restic_gdrive_folder_id\": \"${{ secrets.RESTIC_GDRIVE_FOLDER_ID }}\",
+              \"gdrive_service_account_json_b64\": \"${{ secrets.GDRIVE_SERVICE_ACCOUNT_JSON_B64 }}\",
+              \"backup_sftp_host\": \"${{ secrets.BACKUP_SFTP_HOST }}\",
+              \"backup_sftp_user\": \"${{ secrets.BACKUP_SFTP_USER }}\",
+              \"backup_sftp_repo_path\": \"${{ secrets.BACKUP_SFTP_REPO_PATH }}\",
+              \"backup_sftp_private_key_b64\": \"${{ secrets.BACKUP_SFTP_PRIVATE_KEY_B64 }}\"
             }" \
             --private-key private_key.pem -u ${{ secrets.ansible-user }}
       - name: Cleanup
