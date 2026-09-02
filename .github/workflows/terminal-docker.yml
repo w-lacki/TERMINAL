@@ -24,6 +24,8 @@ jobs:
             context: ./Client
           - image-name: server
             context: ./Server/src
+          - image-name: backup
+            context: ./Backup
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

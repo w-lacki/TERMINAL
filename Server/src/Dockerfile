@@ -13,7 +13,7 @@ RUN dotnet restore "Terminal.Backend.Api/Terminal.Backend.Api.csproj"
 
 WORKDIR "/src/Terminal.Backend.Api"
 COPY . .
-COPY Terminal.Backend.Api/appsettings*.json .
+COPY Terminal.Backend.Api/appsettings*.json ./
 RUN dotnet build "Terminal.Backend.Api.csproj" --no-restore -c Release -o /app/build /p:UseAppHost=false
 
 FROM build AS publish
